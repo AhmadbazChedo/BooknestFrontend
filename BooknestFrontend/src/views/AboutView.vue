@@ -15,16 +15,17 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue';
+import { defineComponent } from 'vue'
+import axios from 'axios'
 
-const baseURL = import.meta.env.VITE_APP_BACKEND_BASE_URL;
-const apiEndpoint = baseURL + '/books'
+const baseURL = import.meta.env.VITE_APP_BACKEND_BASE_URL
+const apiEndpoint = `${baseURL}/books`
 
 interface Book {
-  id: number;
-  title: string;
-  author: string;
-  genre: string;
+  id: number
+  title: string
+  author: string
+  genre: string
 }
 
 export default defineComponent({
@@ -32,22 +33,26 @@ export default defineComponent({
   data() {
     return {
       books: [] as Book[],
-    };
+    }
+  },
+  methods: {
+    requestBooks(): void {
+      axios
+        .get<Book[]>(apiEndpoint)
+        .then((res) => {
+          console.log(res.data)
+          this.books = res.data
+        })
+        .catch((error) => {
+          this.logError(error)
+        })
+    },
+    logError(error: unknown) {
+      console.error('Fehler beim Abrufen der Bücher:', error)
+    },
   },
   mounted() {
-    fetch(apiEndpoint)
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`Fehler beim Laden: ${response.statusText}`);
-        }
-        return response.json();
-      })
-      .then(data => {
-        this.books = data;
-      })
-      .catch(error => {
-        console.error("Fehler beim Abrufen der Bücher:", error);
-      });
+    this.requestBooks()
   },
-});
+})
 </script>
