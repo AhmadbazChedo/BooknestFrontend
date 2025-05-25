@@ -18,7 +18,7 @@
 import { defineComponent } from 'vue';
 
 const baseURL = import.meta.env.VITE_APP_BACKEND_BASE_URL;
-const apiEndpoint = `${baseURL}/books`;
+const apiEndpoint = baseURL + '/books'
 
 interface Book {
   id: number;
