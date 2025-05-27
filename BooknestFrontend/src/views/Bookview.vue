@@ -12,6 +12,9 @@
           <h3>{{ book.title }}</h3>
           <p><strong>Autor:</strong> {{ book.author }}</p>
           <p><strong>Genre:</strong> {{ book.genre }}</p>
+          <p><strong>Kapitel:</strong> {{ book.chapters.length }}</p>
+          <p><strong>Fortschritt:</strong> {{ book.readingProgress }}</p>
+          <p><strong>Zusammenfassung:</strong> {{ book.summary }}</p>
         </div>
       </li>
     </ul>
@@ -22,7 +25,7 @@
 import { defineComponent } from 'vue'
 import axios from 'axios'
 
-const baseURL = import.meta.env.VITE_APP_BACKEND_BASE_URL
+const baseURL = import.meta.env.VITE_APP_BACKEND_BASE_URL || 'http://localhost:8080'
 const apiEndpoint = `${baseURL}/books`
 
 interface Book {
@@ -30,6 +33,9 @@ interface Book {
   title: string
   author: string
   genre: string
+  chapters: number[]
+  summary: string
+  readingProgress: string
 }
 
 export default defineComponent({
