@@ -25,8 +25,8 @@
 import { defineComponent } from 'vue'
 import axios from 'axios'
 
-const baseURL = import.meta.env.VITE_APP_BACKEND_BASE_URL || 'http://localhost:8080' || 'https://booknestweb.onrender.com/books'
-const apiEndpoint = `${baseURL}/books`
+const baseURL = import.meta.env.VITE_APP_BACKEND_BASE_URL || 'http://localhost:8080' || 'https://booknestweb.onrender.com'
+const apiEndpoint = baseURL + '/books'
 
 interface Book {
   id: number
