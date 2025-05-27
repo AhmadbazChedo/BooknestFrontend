@@ -25,7 +25,7 @@
 import { defineComponent } from 'vue'
 import axios from 'axios'
 
-const baseURL = import.meta.env.VITE_APP_BACKEND_BASE_URL || 'http://localhost:8080'
+const baseURL = import.meta.env.VITE_APP_BACKEND_BASE_URL || 'http://localhost:8080' 
 const apiEndpoint = `${baseURL}/books`
 
 interface Book {
