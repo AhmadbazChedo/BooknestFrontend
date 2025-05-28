@@ -11,9 +11,7 @@
   "scripts": {
     "dev": "vite",
 
-    // Build-Pipeline für Render:
-    // 1. TypeScript-Types prüfen (vue-tsc)   – bricht bei Fehlern ab
-    // 2. Produktions-Bundle erzeugen (vite)
+
     "build": "npm run type-check && vite build",
 
     "preview": "vite preview",
