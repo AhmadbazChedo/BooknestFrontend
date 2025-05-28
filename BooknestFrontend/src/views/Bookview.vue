@@ -27,7 +27,7 @@ import axios from 'axios'
 
 const baseURL = import.meta.env.VITE_APP_BACKEND_BASE_URL ??
                   'https://booknestweb3.onrender.com'
-const apiEndpoint = https://booknestweb3.onrender.com/books
+const apiEndpoint = 'https://booknestweb3.onrender.com/books'
 
 interface Book {
   id: number
