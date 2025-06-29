@@ -1,10 +1,10 @@
 <template>
-  <div class="book-list-view">
-    <h2>📚 Meine Bücher</h2>
-
+  <div class="search-view">
+    <h2>🔍 Bücher durchsuchen</h2>
+    
     <div class="search-container">
       <div class="search-box">
-        <h3><i class="fas fa-search"></i> Nach Titel suchen</h3>
+        <h3><i class="fas fa-heading"></i> Nach Titel suchen</h3>
         <div class="search-input">
           <input 
             v-model="searchTitle" 
@@ -34,22 +34,30 @@
       </div>
       
       <div class="search-box">
-        <h3><i class="fas fa-star"></i> Filter</h3>
+        <h3><i class="fas fa-star"></i> Spezialfilter</h3>
         <div class="filter-buttons">
-          <button @click="loadAllBooks" class="filter-btn">Alle Bücher</button>
           <button @click="loadFavorites" class="filter-btn favorite-btn">
             <i class="fas fa-star"></i> Nur Favoriten
+          </button>
+          <button @click="clearSearch" class="filter-btn">
+            <i class="fas fa-refresh"></i> Zurücksetzen
           </button>
         </div>
       </div>
     </div>
 
-    <div v-if="books.length === 0" class="no-books">
-      <p>Keine Bücher gefunden.</p>
+    <div v-if="searchResults.length === 0 && hasSearched" class="no-results">
+      <i class="fas fa-search"></i>
+      <h3>Keine Ergebnisse gefunden</h3>
+      <p>Versuche andere Suchbegriffe oder überprüfe die Schreibweise.</p>
     </div>
 
-    <ul v-else class="book-list">
-      <li v-for="book in books" :key="book.id" class="book-item">
+    <div v-if="searchResults.length > 0" class="results-info">
+      <p>{{ searchResults.length }} Buch(ü)er gefunden</p>
+    </div>
+
+    <ul v-if="searchResults.length > 0" class="book-list">
+      <li v-for="book in searchResults" :key="book.id" class="book-item">
         <div class="book-card" :class="{ 'favorite': book.favorite }" @click="goToBookDetail(book.id)">
           <div class="book-header">
             <div>
@@ -65,17 +73,6 @@
             <p><strong>Genre:</strong> {{ book.genre || 'Nicht angegeben' }}</p>
             <p><strong>Kapitel:</strong> {{ book.chapters?.length || 0 }}</p>
             <p><strong>Fortschritt:</strong> {{ book.readingProgress || 'Nicht angegeben' }}</p>
-            
-            <div v-if="getProgressPercentage(book.readingProgress) > 0" class="progress-container">
-              <div class="progress-bar">
-                <div 
-                  class="progress-fill" 
-                  :style="{ width: getProgressPercentage(book.readingProgress) + '%' }"
-                ></div>
-              </div>
-              <span class="progress-text">{{ getProgressPercentage(book.readingProgress) }}%</span>
-            </div>
-            
             <p v-if="book.summary"><strong>Zusammenfassung:</strong> {{ book.summary }}</p>
           </div>
           
@@ -85,11 +82,11 @@
               :class="['action-btn', book.favorite ? 'favorite-btn' : 'add-favorite-btn']"
             >
               <i :class="['fas', book.favorite ? 'fa-star' : 'fa-star-o']"></i>
-              {{ book.favorite ? 'Favorit entfernen' : 'Zu Favoriten' }}
+              {{ book.favorite ? 'Favorit' : 'Favorit +' }}
             </button>
             
             <button @click="updateProgress(book)" class="action-btn update-btn">
-              <i class="fas fa-edit"></i> Fortschritt ändern
+              <i class="fas fa-edit"></i> Fortschritt
             </button>
           </div>
         </div>
@@ -118,71 +115,61 @@ interface Book {
 }
 
 export default defineComponent({
-  name: 'BookListView',
+  name: 'SearchView',
   data() {
     return {
-      books: [] as Book[],
       searchTitle: '',
       searchGenre: '',
+      searchResults: [] as Book[],
+      hasSearched: false,
     }
   },
   methods: {
-    requestBooks(): void {
-      axios
-        .get<Book[]>(apiEndpoint)
-        .then((res) => {
-          console.log('Bücher geladen:', res.data)
-          this.books = res.data
-        })
-        .catch((error) => {
-          console.error('Fehler beim Abrufen der Bücher:', error)
-        })
-    },
-    
-    loadAllBooks(): void {
-      this.requestBooks()
-    },
-    
-    async loadFavorites(): Promise<void> {
-      try {
-        const response = await axios.get<Book[]>(`${apiEndpoint}/favorites`)
-        this.books = response.data
-        console.log('Favoriten geladen:', response.data)
-      } catch (error) {
-        console.error('Fehler beim Abrufen der Favoriten:', error)
-      }
-    },
-    
     async searchByTitle(): Promise<void> {
-      if (!this.searchTitle.trim()) {
-        this.loadAllBooks()
-        return
-      }
+      if (!this.searchTitle.trim()) return
       
+      this.hasSearched = true
       try {
         const response = await axios.get<Book[]>(`${apiEndpoint}/title/${encodeURIComponent(this.searchTitle)}`)
-        this.books = response.data
+        this.searchResults = response.data
         console.log('Suchergebnisse (Titel):', response.data)
       } catch (error) {
         console.error('Fehler bei der Titelsuche:', error)
-        this.books = []
+        this.searchResults = []
       }
     },
     
     async searchByGenre(): Promise<void> {
-      if (!this.searchGenre.trim()) {
-        this.loadAllBooks()
-        return
-      }
+      if (!this.searchGenre.trim()) return
       
+      this.hasSearched = true
       try {
         const response = await axios.get<Book[]>(`${apiEndpoint}/genre/${encodeURIComponent(this.searchGenre)}`)
-        this.books = response.data
+        this.searchResults = response.data
         console.log('Suchergebnisse (Genre):', response.data)
       } catch (error) {
         console.error('Fehler bei der Genresuche:', error)
-        this.books = []
+        this.searchResults = []
       }
+    },
+    
+    async loadFavorites(): Promise<void> {
+      this.hasSearched = true
+      try {
+        const response = await axios.get<Book[]>(`${apiEndpoint}/favorites`)
+        this.searchResults = response.data
+        console.log('Favoriten geladen:', response.data)
+      } catch (error) {
+        console.error('Fehler beim Abrufen der Favoriten:', error)
+        this.searchResults = []
+      }
+    },
+    
+    clearSearch(): void {
+      this.searchTitle = ''
+      this.searchGenre = ''
+      this.searchResults = []
+      this.hasSearched = false
     },
     
     async toggleFavorite(book: Book): Promise<void> {
@@ -190,7 +177,6 @@ export default defineComponent({
         const newFavoriteStatus = !book.favorite
         await axios.patch(`${apiEndpoint}/favorite/${book.id}?favorite=${newFavoriteStatus}`)
         book.favorite = newFavoriteStatus
-        console.log(`Favoriten-Status geändert für "${book.title}": ${newFavoriteStatus}`)
       } catch (error) {
         console.error('Fehler beim Ändern des Favoriten-Status:', error)
       }
@@ -203,30 +189,20 @@ export default defineComponent({
       try {
         await axios.patch(`${apiEndpoint}/progress/${book.id}?progress=${encodeURIComponent(newProgress)}`)
         book.readingProgress = newProgress
-        console.log(`Fortschritt aktualisiert für "${book.title}": ${newProgress}`)
       } catch (error) {
         console.error('Fehler beim Aktualisieren des Fortschritts:', error)
       }
     },
     
-    getProgressPercentage(progress: string): number {
-      if (!progress) return 0
-      const match = progress.match(/(\d+)%/)
-      return match ? parseInt(match[1]) : 0
-    },
-    
     goToBookDetail(bookId: number): void {
       this.$router.push(`/book/${bookId}`)
     },
-  },
-  mounted() {
-    this.requestBooks()
-  },
+  }
 })
 </script>
 
 <style scoped>
-.book-list-view {
+.search-view {
   max-width: 1200px;
   margin: 0 auto;
   padding: 40px 20px;
@@ -317,8 +293,22 @@ h2 {
   color: #333 !important;
 }
 
-.favorite-btn:hover {
-  background: #ffed4e !important;
+.no-results {
+  text-align: center;
+  padding: 60px 20px;
+  color: #999;
+}
+
+.no-results i {
+  font-size: 48px;
+  margin-bottom: 20px;
+  opacity: 0.5;
+}
+
+.results-info {
+  margin-bottom: 20px;
+  color: #666;
+  font-weight: 500;
 }
 
 .book-list {
@@ -327,11 +317,6 @@ h2 {
   gap: 20px;
   padding: 0;
   list-style-type: none;
-}
-
-.book-item {
-  margin: 0;
-  padding: 0;
 }
 
 .book-card {
@@ -376,12 +361,6 @@ h2 {
 .favorite-star {
   color: #fdcb6e;
   font-size: 20px;
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
 }
 
 .book-details p {
@@ -390,51 +369,23 @@ h2 {
   font-size: 14px;
 }
 
-.progress-container {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 10px 0;
-}
-
-.progress-bar {
-  flex: 1;
-  background: #e2e8f0;
-  border-radius: 10px;
-  height: 8px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  background: linear-gradient(135deg, #48bb78, #38a169);
-  height: 100%;
-  border-radius: 10px;
-  transition: width 0.3s ease;
-}
-
-.progress-text {
-  font-size: 12px;
-  color: #666;
-  font-weight: 600;
-}
-
 .book-actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   margin-top: 15px;
   flex-wrap: wrap;
 }
 
 .action-btn {
-  padding: 8px 12px;
+  padding: 6px 10px;
   border: none;
-  border-radius: 6px;
+  border-radius: 4px;
   cursor: pointer;
   font-size: 12px;
   transition: all 0.2s;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
 }
 
 .add-favorite-btn {
@@ -442,17 +393,9 @@ h2 {
   color: white;
 }
 
-.add-favorite-btn:hover {
-  background: #5a6fd8;
-}
-
 .favorite-btn.action-btn {
   background: #ffd700;
   color: #333;
-}
-
-.favorite-btn.action-btn:hover {
-  background: #ffed4e;
 }
 
 .update-btn {
@@ -460,17 +403,8 @@ h2 {
   color: white;
 }
 
-.update-btn:hover {
-  background: #38a169;
-}
-
-.no-books {
-  text-align: center;
-  font-size: 18px;
-  color: #777;
-  background-color: #fff3cd;
-  border: 1px solid #ffeeba;
-  padding: 20px;
-  border-radius: 10px;
+.action-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 </style>

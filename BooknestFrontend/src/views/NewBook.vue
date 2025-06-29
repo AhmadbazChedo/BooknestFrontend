@@ -1,45 +1,109 @@
 <template>
-  <div class="book-list-view">
-    <h2>📚 Meine Bücher</h2>
-
-    <form @submit.prevent="addBook" class="book-form">
-      <input v-model="newBook.title" placeholder="Titel" required />
-      <input v-model="newBook.author" placeholder="Autor" required />
-      <input v-model="newBook.genre" placeholder="Genre" required />
-      <input v-model.number="chapterCount" type="number" min="1" placeholder="Kapitelanzahl" required />
-      <input v-model="newBook.readingProgress" placeholder="Fortschritt (z.B. 0%)" required />
-      <textarea v-model="newBook.summary" placeholder="Zusammenfassung" required></textarea>
-      <button type="submit" class="add-book-btn">Buch hinzufügen</button>
-    </form>
-
-    <div v-if="books.length === 0" class="no-books">
-      <p>Keine Bücher gefunden.</p>
+  <div class="new-book-view">
+    
+    <div class="header">
+      <router-link to="/" class="back-btn">
+        Back to Books
+      </router-link>
+      <h1 class="page-title">Add New Book</h1>
     </div>
 
-    <ul v-else class="book-list">
-      <li v-for="book in books" :key="book.id" class="book-item">
-        <div class="book-card">
-          <h3>{{ book.title }}</h3>
-          <p><strong>Autor:</strong> {{ book.author }}</p>
-          <p><strong>Genre:</strong> {{ book.genre }}</p>
-          <p><strong>Kapitel:</strong> {{ book.chapters.length }}</p>
-          <p><strong>Fortschritt:</strong> {{ book.readingProgress }}</p>
-          <p><strong>Zusammenfassung:</strong> {{ book.summary }}</p>
-          <button class="delete-btn" @click="confirmDelete(book.id)" title="Buch löschen">
-            <svg class="trash-icon" viewBox="0 0 24 24" width="20" height="20">
-              <path fill="currentColor" d="M3 6h18v2H3V6zm2 3h14l-1.5 13h-11L5 9zm5 2v7h2v-7h-2zm-4 0v7h2v-7H6zm8 0v7h2v-7h-2z"/>
-            </svg>
-          </button>
+   
+    <div class="form-container">
+      <div class="book-form">
+        <div class="form-group">
+          <label for="title">Title</label>
+          <input
+            id="title"
+            v-model="newBook.title"
+            type="text"
+            placeholder="Enter book title"
+            class="form-input"
+          />
         </div>
-      </li>
-    </ul>
 
- 
-    <div v-if="showConfirm" class="confirm-dialog">
-      <div class="confirm-box">
-        <p>Willst du das Buch wirklich löschen?</p>
-        <button @click="deleteBook(confirmedId)" class="yes-btn">Ja</button>
-        <button @click="showConfirm = false" class="no-btn">Nein</button>
+        <div class="form-group">
+          <label for="author">Author</label>
+          <input
+            id="author"
+            v-model="newBook.author"
+            type="text"
+            placeholder="Enter author name"
+            class="form-input"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="genre">Genre</label>
+          <input
+            id="genre"
+            v-model="newBook.genre"
+            type="text"
+            placeholder="Enter genre"
+            class="form-input"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="chapters">Chapters</label>
+          <input
+            id="chapters"
+            v-model="chaptersInput"
+            type="text"
+            placeholder="e.g. 1,2,3,4,5"
+            class="form-input"
+          />
+          <small class="form-hint"
+            >Enter chapter numbers separated by commas</small
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="progress">Reading Progress</label>
+          <input
+            id="progress"
+            v-model="newBook.readingProgress"
+            type="text"
+            placeholder="e.g. 25%, Page 150, Chapter 3"
+            class="form-input"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="summary">Summary</label>
+          <textarea
+            id="summary"
+            v-model="newBook.summary"
+            placeholder="Enter a brief summary of the book"
+            class="form-textarea"
+            rows="4"
+          ></textarea>
+        </div>
+
+        <div class="form-group checkbox-group">
+          <label class="checkbox-label">
+            <input
+              v-model="newBook.favorite"
+              type="checkbox"
+              class="checkbox-input"
+            />
+            <span class="checkbox-custom"></span>
+            Mark as favorite
+          </label>
+        </div>
+
+        <div class="form-actions">
+          <button
+            @click="addBook"
+            class="add-btn"
+            :disabled="!isFormValid"
+          >
+            Add Book
+          </button>
+          <router-link to="/" class="cancel-btn">
+            Cancel
+          </router-link>
+        </div>
       </div>
     </div>
   </div>
@@ -49,13 +113,24 @@
 import { defineComponent } from 'vue'
 import axios from 'axios'
 
-const baseURL = import.meta.env.VITE_APP_BACKEND_BASE_URL 
+const baseURL = import.meta.env.VITE_APP_BACKEND_BASE_URL ??
+                  'https://booknestweb.onrender.com'
 const apiEndpoint = baseURL + '/books'
 
+interface Book {
+  title: string
+  author: string
+  genre: string
+  chapters: number[]
+  summary: string
+  readingProgress: string
+  favorite: boolean
+}
+
 export default defineComponent({
+  name: 'NewBook',
   data() {
     return {
-      books: [] as Array<any>,
       newBook: {
         title: '',
         author: '',
@@ -63,30 +138,35 @@ export default defineComponent({
         chapters: [] as number[],
         summary: '',
         readingProgress: '',
-      },
-      chapterCount: 1,
-      showConfirm: false,
-      confirmedId: null as number | null,
+        favorite: false
+      } as Book,
+      chaptersInput: ''
+    }
+  },
+  computed: {
+    isFormValid(): boolean {
+      return this.newBook.title.trim() !== '' && 
+             this.newBook.author.trim() !== '' && 
+             this.newBook.genre.trim() !== ''
     }
   },
   methods: {
-    requestBooks(): void {
-      axios
-        .get(apiEndpoint)
-        .then((res) => {
-          this.books = res.data
-        })
-        .catch((error) => {
-          console.error('Fehler beim Abrufen der Bücher:', error)
-        })
-    },
-    async addBook() {
-     
-      this.newBook.chapters = Array.from({ length: this.chapterCount }, (_, i) => i + 1)
+    async addBook(): Promise<void> {
+      if (!this.isFormValid) return
+
+      
+      if (this.chaptersInput.trim()) {
+        this.newBook.chapters = this.chaptersInput
+          .split(',')
+          .map(ch => parseInt(ch.trim()))
+          .filter(ch => !isNaN(ch))
+      }
+
       try {
-        const res = await axios.post(apiEndpoint, this.newBook)
-        this.books.push(res.data)
- 
+        const response = await axios.post(apiEndpoint, this.newBook)
+        console.log('Book added successfully:', response.data)
+        
+        
         this.newBook = {
           title: '',
           author: '',
@@ -94,200 +174,251 @@ export default defineComponent({
           chapters: [],
           summary: '',
           readingProgress: '',
+          favorite: false
         }
-        this.chapterCount = 1
+        this.chaptersInput = ''
+        
+        
+        this.$router.push('/')
       } catch (error) {
-        console.error('Fehler beim Hinzufügen des Buchs:', error)
+        console.error('Error adding book:', error)
+        alert('Error adding book. Please try again.')
       }
-    },
-    confirmDelete(id: number) {
-      this.confirmedId = id
-      this.showConfirm = true
-    },
-    async deleteBook(id: number | null) {
-      if (id === null) return
-      try {
-        await axios.delete(`${apiEndpoint}/${id}`)
-        this.books = this.books.filter(book => book.id !== id)
-      } catch (error) {
-        console.error('Fehler beim Löschen des Buchs:', error)
-      } finally {
-        this.showConfirm = false
-        this.confirmedId = null
-      }
-    },
-  },
-  mounted() {
-    this.requestBooks()
+    }
   }
 })
 </script>
 
 <style scoped>
-.book-list-view {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 40px 20px;
-  font-family: 'Segoe UI', sans-serif;
-  background-color: #f8f9fa;
+.new-book-view {
   min-height: 100vh;
+  background: #1a1a1a;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
 }
 
-h2 {
-  text-align: center;
-  font-size: 32px;
-  color: #333;
+.header {
+  width: 100%;
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   margin-bottom: 40px;
+  text-align: center;
+}
+
+.back-btn {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
+  margin-bottom: 20px;
+  align-self: flex-start;
+}
+
+.back-btn:hover {
+  color: #5a6fd8;
+}
+
+.page-title {
+  font-size: 2.5rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0;
+}
+
+.form-container {
+  width: 100%;
+  max-width: 600px;
+  display: flex;
+  justify-content: center;
 }
 
 .book-form {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-width: 400px;
-  margin: 0 auto 30px auto;
-  background: #fff;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  background: #2d2d2d;
+  border: 1px solid #444;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  width: 100%;
 }
-.book-form input,
-.book-form textarea {
-  padding: 8px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  font-size: 15px;
+
+.form-group {
+  margin-bottom: 1.5rem;
 }
-.book-form textarea {
-  resize: vertical;
-  min-height: 60px;
-}
-.add-book-btn {
-  margin: 0;
+
+.form-group label {
   display: block;
-  padding: 10px 24px;
-  background-color: #4caf50;
-  color: white;
-  border: none;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #ffffff;
+  font-size: 0.9rem;
+}
+
+.form-input,
+.form-textarea {
+  width: 100%;
+  padding: 12px 16px;
+  background: #1a1a1a;
+  border: 1px solid #444;
   border-radius: 8px;
+  color: #ffffff;
   font-size: 16px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.add-book-btn:hover {
-  background-color: #388e3c;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+  box-sizing: border-box;
 }
 
-.book-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 20px;
-  padding: 0;
-  list-style-type: none;
+.form-input:focus,
+.form-textarea:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
-.book-item {
-  margin: 0;
-  padding: 0;
+.form-input::placeholder,
+.form-textarea::placeholder {
+  color: #888;
 }
 
-.book-card {
-  background-color: white;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+.form-textarea {
+  resize: vertical;
+  min-height: 100px;
+  font-family: inherit;
 }
 
-.book-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
+.form-hint {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  color: #888;
 }
 
-.book-card h3 {
-  margin-top: 0;
-  color: #2c3e50;
-  font-size: 20px;
-}
-
-.book-card p {
-  margin: 6px 0;
-  color: #555;
-  font-size: 14px;
-}
-
-.no-books {
-  text-align: center;
-  font-size: 18px;
-  color: #777;
-  background-color: #fff3cd;
-  border: 1px solid #ffeeba;
-  padding: 20px;
-  border-radius: 10px;
-}
-.delete-btn {
-  margin-top: 12px;
-  background: transparent;
-  border: 2px solid transparent;
-  border-radius: 50%;
-  padding: 7px;
-  cursor: pointer;
+.checkbox-group {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  transition: border 0.2s, background 0.2s;
-}
-.delete-btn .trash-icon {
-  color: #e53935;
-  width: 20px;
-  height: 20px;
-  transition: color 0.2s, filter 0.2s;
-}
-.delete-btn:hover {
-  border: 2px solid #e53935;
-  background: #fff;
-}
-.delete-btn:hover .trash-icon {
-  filter: invert(1) grayscale(1) brightness(0.7);
 }
 
-.confirm-dialog {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.3);
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.checkbox-input {
+  display: none;
+}
+
+.checkbox-custom {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #444;
+  border-radius: 4px;
+  background: #1a1a1a;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.checkbox-input:checked + .checkbox-custom {
+  background: #667eea;
+  border-color: #667eea;
+}
+
+.checkbox-input:checked + .checkbox-custom::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.add-btn {
+  background: #667eea;
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  flex: 1;
 }
-.confirm-box {
-  background: #fff;
-  padding: 30px 40px;
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
-  text-align: center;
-  color: #111;
+
+.add-btn:hover:not(:disabled) {
+  background: #5a6fd8;
+  transform: translateY(-2px);
 }
-.yes-btn, .no-btn {
-  margin: 10px 12px 0 12px;
-  padding: 8px 18px;
-  border: none;
-  border-radius: 6px;
-  font-size: 15px;
-  cursor: pointer;
+
+.add-btn:disabled {
+  background: #444;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
-.yes-btn {
-  background: #e53935;
-  color: #fff;
+
+.cancel-btn {
+  background: transparent;
+  color: #888;
+  border: 1px solid #444;
+  padding: 14px 28px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 16px;
+  text-decoration: none;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
 }
-.no-btn {
-  background: #eee;
-  color: #333;
+
+.cancel-btn:hover {
+  background: #444;
+  color: #ffffff;
 }
-.yes-btn:hover {
-  background: #b71c1c;
+
+
+@media (max-width: 768px) {
+  .new-book-view {
+    padding: 20px 15px;
+  }
+  
+  .page-title {
+    font-size: 2rem;
+  }
+  
+  .book-form {
+    padding: 1.5rem;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+  }
 }
-.no-btn:hover {
-  background: #ccc;
+
+@media (max-width: 480px) {
+  .book-form {
+    padding: 1rem;
+  }
+  
+  .page-title {
+    font-size: 1.8rem;
+  }
 }
 </style>
