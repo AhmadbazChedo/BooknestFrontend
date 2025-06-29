@@ -10,7 +10,6 @@ vi.mock('vue-router', () => ({
   useRouter: vi.fn(),
 }))
 
-
 vi.mock('../../components/DeleteConfirmation.vue', () => ({
   default: {
     name: 'DeleteConfirmation',
@@ -40,8 +39,6 @@ describe('EditBook', () => {
     vi.clearAllMocks()
   })
 
-  
-
   it('should initialize empty form for new book', async () => {
     vi.mocked(useRoute).mockReturnValue(mockRouteNew as any)
 
@@ -51,8 +48,8 @@ describe('EditBook', () => {
     const titleInput = wrapper.find('input[id="title"]')
     const authorInput = wrapper.find('input[id="author"]')
     
-    expect(titleInput.element.value).toBe('')
-    expect(authorInput.element.value).toBe('')
+    expect((titleInput.element as HTMLInputElement).value).toBe('')
+    expect((authorInput.element as HTMLInputElement).value).toBe('')
     expect(wrapper.text()).toContain('Add New Book')
   })
 
@@ -65,7 +62,6 @@ describe('EditBook', () => {
     const wrapper = mount(EditBook)
     await flushPromises()
     
-  
     const titleInput = wrapper.find('input[id="title"]')
     const authorInput = wrapper.find('input[id="author"]')
     const genreSelect = wrapper.find('select[id="genre"]')
@@ -74,7 +70,6 @@ describe('EditBook', () => {
     await authorInput.setValue('New Author')
     await genreSelect.setValue('Fiction')
     
-   
     const form = wrapper.find('form')
     await form.trigger('submit.prevent')
     await flushPromises()
@@ -147,7 +142,6 @@ describe('EditBook', () => {
     await deleteBtn.trigger('click')
     await flushPromises()
     
-    
     const deleteConfirmation = wrapper.findComponent({ name: 'DeleteConfirmation' })
     expect(deleteConfirmation.exists()).toBe(true)
     expect(deleteConfirmation.props('show')).toBe(true)
@@ -172,11 +166,9 @@ describe('EditBook', () => {
     const wrapper = mount(EditBook)
     await flushPromises()
     
-   
     const deleteBtn = wrapper.find('.delete-btn')
     await deleteBtn.trigger('click')
     await flushPromises()
-    
     
     const deleteConfirmation = wrapper.findComponent({ name: 'DeleteConfirmation' })
     await deleteConfirmation.vm.$emit('confirm')
