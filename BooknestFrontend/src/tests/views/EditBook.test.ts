@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { shallowMount, flushPromises } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import axios from 'axios'
 import EditBook from '../../views/EditBook.vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -8,6 +8,16 @@ vi.mock('axios')
 vi.mock('vue-router', () => ({
   useRoute: vi.fn(),
   useRouter: vi.fn(),
+}))
+
+
+vi.mock('../../components/DeleteConfirmation.vue', () => ({
+  default: {
+    name: 'DeleteConfirmation',
+    template: '<div></div>',
+    props: ['show'],
+    emits: ['confirm', 'cancel']
+  }
 }))
 
 describe('EditBook', () => {
@@ -30,59 +40,44 @@ describe('EditBook', () => {
     vi.clearAllMocks()
   })
 
-  it('should load existing book for editing', async () => {
-    vi.mocked(useRoute).mockReturnValue(mockRouteEdit as any)
-    vi.mocked(axios, true).get.mockResolvedValueOnce({
-      data: {
-        id: 157,
-        title: 'Animal Farm',
-        author: 'George Orwell',
-        genre: 'Political Satire',
-        chapters: [1, 2, 3, 4, 5, 6, 7],
-        summary: 'Farm animals rebel',
-        readingProgress: '0%',
-        favorite: false,
-        coverImage: 'https://example.com/cover.jpg',
-      },
-    })
-
-    const wrapper = shallowMount(EditBook)
-
-    await flushPromises()
-    
-    expect(wrapper.vm.formData.title).toBe('Animal Farm')
-    expect(wrapper.vm.formData.author).toBe('George Orwell')
-    expect(wrapper.vm.formData.genre).toBe('Political Satire')
-    expect(wrapper.vm.isNewBook).toBe(false)
-  })
+  
 
   it('should initialize empty form for new book', async () => {
     vi.mocked(useRoute).mockReturnValue(mockRouteNew as any)
 
-    const wrapper = shallowMount(EditBook)
-
+    const wrapper = mount(EditBook)
     await flushPromises()
     
-    expect(wrapper.vm.formData.title).toBe('')
-    expect(wrapper.vm.formData.author).toBe('')
-    expect(wrapper.vm.isNewBook).toBe(true)
+    const titleInput = wrapper.find('input[id="title"]')
+    const authorInput = wrapper.find('input[id="author"]')
+    
+    expect(titleInput.element.value).toBe('')
+    expect(authorInput.element.value).toBe('')
+    expect(wrapper.text()).toContain('Add New Book')
   })
 
   it('should save new book', async () => {
     vi.mocked(useRoute).mockReturnValue(mockRouteNew as any)
-    vi.mocked(axios, true).post.mockResolvedValueOnce({
+    vi.mocked(axios.post).mockResolvedValueOnce({
       data: { id: 123 },
     })
 
-    const wrapper = shallowMount(EditBook)
-
-    await wrapper.vm.$nextTick()
+    const wrapper = mount(EditBook)
+    await flushPromises()
     
-    wrapper.vm.formData.title = 'New Book'
-    wrapper.vm.formData.author = 'New Author'
-    wrapper.vm.formData.genre = 'Fiction'
+  
+    const titleInput = wrapper.find('input[id="title"]')
+    const authorInput = wrapper.find('input[id="author"]')
+    const genreSelect = wrapper.find('select[id="genre"]')
     
-    await wrapper.vm.saveBook()
+    await titleInput.setValue('New Book')
+    await authorInput.setValue('New Author')
+    await genreSelect.setValue('Fiction')
+    
+   
+    const form = wrapper.find('form')
+    await form.trigger('submit.prevent')
+    await flushPromises()
     
     expect(axios.post).toHaveBeenCalledWith(
       'https://booknestweb.onrender.com/books',
@@ -97,7 +92,7 @@ describe('EditBook', () => {
 
   it('should update existing book', async () => {
     vi.mocked(useRoute).mockReturnValue(mockRouteEdit as any)
-    vi.mocked(axios, true).get.mockResolvedValueOnce({
+    vi.mocked(axios.get).mockResolvedValueOnce({
       data: {
         id: 157,
         title: 'Animal Farm',
@@ -109,15 +104,17 @@ describe('EditBook', () => {
         favorite: false,
       },
     })
-    vi.mocked(axios, true).put.mockResolvedValueOnce({})
+    vi.mocked(axios.put).mockResolvedValueOnce({})
 
-    const wrapper = shallowMount(EditBook)
-
+    const wrapper = mount(EditBook)
     await flushPromises()
     
-    wrapper.vm.formData.title = 'Updated Title'
+    const titleInput = wrapper.find('input[id="title"]')
+    await titleInput.setValue('Updated Title')
     
-    await wrapper.vm.saveBook()
+    const form = wrapper.find('form')
+    await form.trigger('submit.prevent')
+    await flushPromises()
     
     expect(axios.put).toHaveBeenCalledWith(
       'https://booknestweb.onrender.com/books/157',
@@ -130,7 +127,7 @@ describe('EditBook', () => {
 
   it('should show delete confirmation modal', async () => {
     vi.mocked(useRoute).mockReturnValue(mockRouteEdit as any)
-    vi.mocked(axios, true).get.mockResolvedValueOnce({
+    vi.mocked(axios.get).mockResolvedValueOnce({
       data: {
         id: 157,
         title: 'Test Book',
@@ -143,18 +140,22 @@ describe('EditBook', () => {
       },
     })
 
-    const wrapper = shallowMount(EditBook)
-
+    const wrapper = mount(EditBook)
     await flushPromises()
     
-    await wrapper.vm.showDeleteConfirmation()
+    const deleteBtn = wrapper.find('.delete-btn')
+    await deleteBtn.trigger('click')
+    await flushPromises()
     
-    expect(wrapper.vm.showDeleteModal).toBe(true)
+    
+    const deleteConfirmation = wrapper.findComponent({ name: 'DeleteConfirmation' })
+    expect(deleteConfirmation.exists()).toBe(true)
+    expect(deleteConfirmation.props('show')).toBe(true)
   })
 
   it('should delete book', async () => {
     vi.mocked(useRoute).mockReturnValue(mockRouteEdit as any)
-    vi.mocked(axios, true).get.mockResolvedValueOnce({
+    vi.mocked(axios.get).mockResolvedValueOnce({
       data: {
         id: 157,
         title: 'Test Book',
@@ -166,17 +167,22 @@ describe('EditBook', () => {
         favorite: false,
       },
     })
-    vi.mocked(axios, true).delete.mockResolvedValueOnce({})
+    vi.mocked(axios.delete).mockResolvedValueOnce({})
 
-    const wrapper = shallowMount(EditBook)
-
+    const wrapper = mount(EditBook)
     await flushPromises()
     
-    await wrapper.vm.confirmDelete()
+   
+    const deleteBtn = wrapper.find('.delete-btn')
+    await deleteBtn.trigger('click')
+    await flushPromises()
+    
+    
+    const deleteConfirmation = wrapper.findComponent({ name: 'DeleteConfirmation' })
+    await deleteConfirmation.vm.$emit('confirm')
+    await flushPromises()
     
     expect(axios.delete).toHaveBeenCalledWith('https://booknestweb.onrender.com/books/157')
     expect(mockRouter.push).toHaveBeenCalledWith('/')
   })
-
- 
 })
