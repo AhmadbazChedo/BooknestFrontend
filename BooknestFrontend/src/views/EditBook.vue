@@ -328,23 +328,33 @@ const saveBook = async (): Promise<void> => {
   isSaving.value = true
   
   try {
-   
+    
+    let processedChapters: number[] = []
+    if (chaptersInput.value && chaptersInput.value.trim()) {
+      processedChapters = chaptersInput.value
+        .split(',')
+        .map(ch => {
+          const trimmed = ch.trim()
+          const parsed = parseInt(trimmed)
+          return isNaN(parsed) ? 0 : parsed
+        })
+        .filter(ch => ch > 0) 
+    }
+    
     const bookData: Book = {
       ...formData.value,
       readingProgress: `${progressValue.value}%`,
-      chapters: chaptersInput.value 
-        ? chaptersInput.value.split(',').map(ch => parseInt(ch.trim())).filter(ch => !isNaN(ch))
-        : [],
+      chapters: processedChapters,
       coverImage: formData.value.coverImage || undefined
     }
     
+    console.log('Saving book with data:', bookData) 
+    
     if (isNewBook.value) {
-      
       const response = await axios.post<Book>(apiEndpoint, bookData)
       console.log('Book created:', response.data)
       router.push(`/book/${response.data.id}`)
     } else {
-      
       bookData.id = bookId.value!
       await axios.put(`${apiEndpoint}/${bookId.value}`, bookData)
       console.log('Book updated:', bookData)
@@ -352,7 +362,14 @@ const saveBook = async (): Promise<void> => {
     }
   } catch (error) {
     console.error('Error saving book:', error)
-    alert('Error saving book!')
+    if (typeof error === 'object' && error !== null && 'response' in error) {
+      // @ts-ignore
+      console.error('Error details:', error.response?.data)
+      // @ts-ignore
+      alert(`Error saving book: ${error.response?.data?.message || error.message}`)
+    } else {
+      alert(`Error saving book: ${String(error)}`)
+    }
   } finally {
     isSaving.value = false
   }

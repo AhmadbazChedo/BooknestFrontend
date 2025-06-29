@@ -154,16 +154,28 @@ export default defineComponent({
     async addBook(): Promise<void> {
       if (!this.isFormValid) return
 
-      
-      if (this.chaptersInput.trim()) {
-        this.newBook.chapters = this.chaptersInput
+    
+      let processedChapters: number[] = []
+      if (this.chaptersInput && this.chaptersInput.trim()) {
+        processedChapters = this.chaptersInput
           .split(',')
-          .map(ch => parseInt(ch.trim()))
-          .filter(ch => !isNaN(ch))
+          .map(ch => {
+            const trimmed = ch.trim()
+            const parsed = parseInt(trimmed)
+            return isNaN(parsed) ? 0 : parsed
+          })
+          .filter(ch => ch > 0) 
       }
+      
+      const bookData = {
+        ...this.newBook,
+        chapters: processedChapters
+      }
+      
+      console.log('Adding book with data:', bookData) 
 
       try {
-        const response = await axios.post(apiEndpoint, this.newBook)
+        const response = await axios.post(apiEndpoint, bookData)
         console.log('Book added successfully:', response.data)
         
         
@@ -178,11 +190,15 @@ export default defineComponent({
         }
         this.chaptersInput = ''
         
-        
         this.$router.push('/')
       } catch (error) {
         console.error('Error adding book:', error)
-        alert('Error adding book. Please try again.')
+        if (axios.isAxiosError(error)) {
+          console.error('Error details:', error.response?.data)
+          alert(`Error adding book: ${error.response?.data?.message || error.message}`)
+        } else {
+          alert(`Error adding book: ${String(error)}`)
+        }
       }
     }
   }
